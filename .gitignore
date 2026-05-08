@@ -1,0 +1,6 @@
+target/
+*.class
+
+settings.json
+
+.DS_Store
