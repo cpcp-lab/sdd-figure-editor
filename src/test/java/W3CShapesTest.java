@@ -7,7 +7,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * 目視確認テスト — 各図形を参照 PNG と比較する．
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   mvn test -Dgroups=visual -Dvisual.auto=true    # 自動比較モード
  */
 @Tag("visual")
-class ShapesVisualTest {
+class W3CShapesTest {
 
     private static final boolean AUTO = Boolean.getBoolean("visual.auto");
     private static final double AUTO_THRESHOLD = 0.10;
@@ -64,7 +64,7 @@ class ShapesVisualTest {
                        new int[]{225,245,225,245,280,280,240,185});
         canvas.addFigure(pl6);
 
-        showAndConfirm("Polyline", canvas, "W3C_SVG_11_TestSuite/png/shapes-polyline-01-t.png");
+        showAndConfirm("Polyline", canvas, W3CImageComparator.SUITE_DIR + "/png/shapes-polyline-01-t.png");
     }
 
     // -----------------------------------------------------------------------
@@ -80,7 +80,7 @@ class ShapesVisualTest {
         canvas.addFigure(new Circle(100, 260, 20, Color.GREEN,          Color.YELLOW));
         canvas.addFigure(new Circle(220, 260, 35, null,                 Color.BLUE));
         canvas.addFigure(new Circle(340, 260, 50, new Color(0, 128, 0), null));
-        showAndConfirm("Circle", canvas, "W3C_SVG_11_TestSuite/png/shapes-circle-01-t.png");
+        showAndConfirm("Circle", canvas, W3CImageComparator.SUITE_DIR + "/png/shapes-circle-01-t.png");
     }
 
     // -----------------------------------------------------------------------
@@ -97,7 +97,7 @@ class ShapesVisualTest {
         canvas.addFigure(new Ellipse( 20, 170,  80, 270, Color.BLUE,           null));
         canvas.addFigure(new Ellipse(130, 170, 190, 270, Color.BLUE,           Color.GREEN));
         canvas.addFigure(new Ellipse(260, 180, 400, 260, Color.BLUE,           Color.GREEN));
-        showAndConfirm("Ellipse", canvas, "W3C_SVG_11_TestSuite/png/shapes-ellipse-01-t.png");
+        showAndConfirm("Ellipse", canvas, W3CImageComparator.SUITE_DIR + "/png/shapes-ellipse-01-t.png");
     }
 
     // -----------------------------------------------------------------------
@@ -132,7 +132,7 @@ class ShapesVisualTest {
         canvas.addFigure(new Line(420, 250, 420, 200, new Color(255, 165, 0)));
         canvas.addFigure(new Line(420, 200, 470, 200, Color.MAGENTA));
 
-        showAndConfirm("Line", canvas, "W3C_SVG_11_TestSuite/png/shapes-line-01-t.png");
+        showAndConfirm("Line", canvas, W3CImageComparator.SUITE_DIR + "/png/shapes-line-01-t.png");
     }
 
     // -----------------------------------------------------------------------
@@ -157,7 +157,7 @@ class ShapesVisualTest {
         canvas.addFigure(new Ellipse(250, 196, 300, 276, Color.BLUE, null));
         canvas.addFigure(new Ellipse(350, 196, 400, 276, null, Color.GREEN));
 
-        showAndConfirm("Rectangle", canvas, "W3C_SVG_11_TestSuite/png/shapes-rect-01-t.png");
+        showAndConfirm("Rectangle", canvas, W3CImageComparator.SUITE_DIR + "/png/shapes-rect-01-t.png");
     }
 
     // -----------------------------------------------------------------------
@@ -198,7 +198,7 @@ class ShapesVisualTest {
                        new int[]{225,245,225,245,280,280,240,185});
         canvas.addFigure(pg7);
 
-        showAndConfirm("Polygon", canvas, "W3C_SVG_11_TestSuite/png/shapes-polygon-01-t.png");
+        showAndConfirm("Polygon", canvas, W3CImageComparator.SUITE_DIR + "/png/shapes-polygon-01-t.png");
     }
 
     // -----------------------------------------------------------------------
@@ -241,57 +241,10 @@ class ShapesVisualTest {
 
     private static void autoConfirm(String title, Canvas canvas, String refPath)
             throws Exception {
-        BufferedImage actual = renderToImage(canvas);
-        BufferedImage ref    = ImageIO.read(new File(refPath));
-        double diff = pixelDiffRatio(actual, ref);
-        assertTrue(diff <= AUTO_THRESHOLD,
-            String.format("%s: diff=%.2f%% > threshold=%.0f%%",
-                title, diff * 100, AUTO_THRESHOLD * 100));
-    }
-
-    private static BufferedImage renderToImage(Canvas canvas) {
         int w = canvas.getPreferredSize().width;
         int h = canvas.getPreferredSize().height;
-        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = img.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, w, h);
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-        canvas.getFigures().forEach(f -> f.draw(g));
-        g.dispose();
-        return img;
-    }
-
-    private static double pixelDiffRatio(BufferedImage a, BufferedImage b) {
-        int w = Math.min(a.getWidth(),  b.getWidth());
-        int h = Math.min(a.getHeight(), b.getHeight());
-        int diff = 0;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int ca = a.getRGB(x, y);
-                int cb = compositeOverWhite(b.getRGB(x, y));
-                if (!close(ca, cb)) diff++;
-            }
-        }
-        return (double) diff / (w * h);
-    }
-
-    private static int compositeOverWhite(int argb) {
-        int alpha = (argb >>> 24) & 0xff;
-        if (alpha == 255) return argb;
-        if (alpha == 0)   return 0xFFFFFFFF;
-        int r = ((argb >> 16) & 0xff) * alpha / 255 + 255 * (255 - alpha) / 255;
-        int g = ((argb >>  8) & 0xff) * alpha / 255 + 255 * (255 - alpha) / 255;
-        int b = ( argb        & 0xff) * alpha / 255 + 255 * (255 - alpha) / 255;
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
-    }
-
-    private static boolean close(int ca, int cb) {
-        int dr = Math.abs(((ca >> 16) & 0xff) - ((cb >> 16) & 0xff));
-        int dg = Math.abs(((ca >>  8) & 0xff) - ((cb >>  8) & 0xff));
-        int db = Math.abs(( ca        & 0xff) - ( cb        & 0xff));
-        return dr < 30 && dg < 30 && db < 30;
+        var actual = W3CImageComparator.render(canvas.getFigures(), w, h);
+        W3CImageComparator.assertMatchesPng(title, actual, refPath);
     }
 
     // --- 目視確認モード ---
