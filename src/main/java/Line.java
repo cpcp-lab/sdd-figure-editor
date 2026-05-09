@@ -1,3 +1,4 @@
+import java.awt.Color;
 import java.awt.Graphics;
 
 public class Line extends Figure {
@@ -6,14 +7,20 @@ public class Line extends Figure {
     private static final double HIT_THRESHOLD = 5.0;
 
     public Line(int x1, int y1, int x2, int y2) {
-        this.x1 = x1;
-        this.y1 = y1;
-        this.x2 = x2;
-        this.y2 = y2;
+        super(Color.BLACK, null);
+        this.x1 = x1; this.y1 = y1;
+        this.x2 = x2; this.y2 = y2;
+    }
+
+    public Line(int x1, int y1, int x2, int y2, Color strokeColor) {
+        super(strokeColor, null);
+        this.x1 = x1; this.y1 = y1;
+        this.x2 = x2; this.y2 = y2;
     }
 
     @Override
     public void draw(Graphics g) {
+        if (strokeColor != null) g.setColor(strokeColor);
         g.drawLine(x1, y1, x2, y2);
     }
 

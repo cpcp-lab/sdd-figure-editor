@@ -22,4 +22,19 @@ public class EditorController extends MouseAdapter {
     public void mouseReleased(MouseEvent e) {
         if (tool != null) tool.onRelease(e.getX(), e.getY());
     }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        if (tool == null) return;
+        if (e.getClickCount() == 2) {
+            tool.onDoubleClick(e.getX(), e.getY());
+        } else if (e.getClickCount() == 1) {
+            tool.onClick(e.getX(), e.getY());
+        }
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        if (tool != null) tool.onMove(e.getX(), e.getY());
+    }
 }

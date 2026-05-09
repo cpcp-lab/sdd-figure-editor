@@ -9,7 +9,8 @@
 @startuml domain-figures
 
 abstract class Figure {
-    position
+    strokeColor
+    fillColor
     --
     draw ()
     move (delta)
@@ -23,8 +24,29 @@ class Line {
 
 class Rectangle {
     topLeft
-    width
-    height
+    bottomRight
+}
+
+class Circle {
+    center
+    radius
+}
+
+class Ellipse {
+    topLeft
+    bottomRight
+}
+
+class Polyline {
+    points
+    --
+    addPoint (point)
+}
+
+class Polygon {
+    points
+    --
+    addPoint (point)
 }
 
 class FigureGroup {
@@ -36,6 +58,10 @@ class FigureGroup {
 
 Figure <|-- Line
 Figure <|-- Rectangle
+Figure <|-- Circle
+Figure <|-- Ellipse
+Figure <|-- Polyline
+Figure <|-- Polygon
 Figure <|-- FigureGroup
 FigureGroup o-- "0..*" Figure : contains
 

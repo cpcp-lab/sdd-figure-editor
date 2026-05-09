@@ -1,6 +1,8 @@
 target/
 *.class
 
-settings.json
+W3C_SVG_11_TestSuite/
+
+.vscode/
 
 .DS_Store
