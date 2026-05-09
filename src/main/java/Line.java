@@ -20,8 +20,11 @@ public class Line extends Figure {
 
     @Override
     public void draw(Graphics g) {
-        if (strokeColor != null) g.setColor(strokeColor);
-        g.drawLine(x1, y1, x2, y2);
+        if (strokeColor != null) {
+            applyStroke(g);
+            g.setColor(strokeColor);
+            g.drawLine(x1, y1, x2, y2);
+        }
     }
 
     @Override
@@ -33,6 +36,12 @@ public class Line extends Figure {
     @Override
     public boolean contains(int x, int y) {
         return pointToSegmentDistance(x, y) < HIT_THRESHOLD;
+    }
+
+    @Override
+    public String toSvg() {
+        return String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" %s/>",
+            x1, y1, x2, y2, strokeAttrs());
     }
 
     public void setEndPoint(int x2, int y2) {

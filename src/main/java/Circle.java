@@ -17,6 +17,7 @@ public class Circle extends Figure {
     @Override
     public void draw(Graphics g) {
         int x = cx - radius, y = cy - radius, d = 2 * radius;
+        applyStroke(g);
         if (fillColor != null) {
             g.setColor(fillColor);
             g.fillOval(x, y, d, d);
@@ -35,6 +36,12 @@ public class Circle extends Figure {
     @Override
     public boolean contains(int x, int y) {
         return Math.hypot(x - cx, y - cy) <= radius;
+    }
+
+    @Override
+    public String toSvg() {
+        return String.format("<circle cx=\"%d\" cy=\"%d\" r=\"%d\" %s/>",
+            cx, cy, radius, strokeAttrs());
     }
 
     public int getCx()     { return cx; }

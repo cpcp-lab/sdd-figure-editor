@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class Polygon extends Figure {
     private final List<Integer> xs = new ArrayList<>();
@@ -42,6 +43,7 @@ public class Polygon extends Figure {
         int n = xs.size();
         int[] xa = xs.stream().mapToInt(v -> v).toArray();
         int[] ya = ys.stream().mapToInt(v -> v).toArray();
+        applyStroke(g);
         if (fillColor != null) {
             g.setColor(fillColor);
             g.fillPolygon(xa, ya, n);
@@ -72,5 +74,12 @@ public class Polygon extends Figure {
             }
         }
         return inside;
+    }
+
+    @Override
+    public String toSvg() {
+        StringJoiner pts = new StringJoiner(" ");
+        for (int i = 0; i < xs.size(); i++) pts.add(xs.get(i) + "," + ys.get(i));
+        return String.format("<polygon points=\"%s\" %s/>", pts, strokeAttrs());
     }
 }

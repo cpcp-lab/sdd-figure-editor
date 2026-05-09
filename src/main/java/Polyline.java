@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class Polyline extends Figure {
     private final List<Integer> xs = new ArrayList<>();
@@ -46,13 +47,14 @@ public class Polyline extends Figure {
         int n = xs.size();
         int[] xa = xs.stream().mapToInt(v -> v).toArray();
         int[] ya = ys.stream().mapToInt(v -> v).toArray();
+        applyStroke(g);
         if (fillColor != null) {
             g.setColor(fillColor);
-            g.fillPolygon(xa, ya, n); // open path の implied closed region を塗る
+            g.fillPolygon(xa, ya, n);
         }
         if (strokeColor != null) {
             g.setColor(strokeColor);
-            g.drawPolyline(xa, ya, n); // 開いたパスとして描く
+            g.drawPolyline(xa, ya, n);
         }
     }
 
@@ -69,6 +71,13 @@ public class Polyline extends Figure {
                 return true;
         }
         return false;
+    }
+
+    @Override
+    public String toSvg() {
+        StringJoiner pts = new StringJoiner(" ");
+        for (int i = 0; i < xs.size(); i++) pts.add(xs.get(i) + "," + ys.get(i));
+        return String.format("<polyline points=\"%s\" %s/>", pts, strokeAttrs());
     }
 
     private static double segmentDist(int px, int py, int x1, int y1, int x2, int y2) {

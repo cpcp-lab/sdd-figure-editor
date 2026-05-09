@@ -4,7 +4,7 @@ GUI アプリケーションのクラス構成を示す．
 
 ## クラス図 1: 全体構造
 
-EditorFrame から Tool と Figure までの関係を示す．
+EditorFrame から Tool と Figure までの関係，および SVG 入出力クラスを示す．
 各クラスの詳細は「クラス図 2」を参照．
 
 ```plantuml
@@ -13,9 +13,11 @@ EditorFrame から Tool と Figure までの関係を示す．
 package view {
     class EditorFrame {
         - canvas : Canvas
-        - controller : EditorController
         --
         + EditorFrame ()
+        - buildMenuBar () : JMenuBar
+        - saveFile () : void
+        - openFile () : void
     }
 
     class Canvas {
@@ -23,6 +25,8 @@ package view {
         - preview : Figure
         --
         + addFigure (Figure f) : void
+        + getFigures () : List<Figure>
+        + setFigures (List<Figure> fs) : void
         + setPreview (Figure f) : void
         + paintComponent (Graphics g) : void
     }
@@ -55,12 +59,28 @@ package model {
     abstract class Figure {
         # strokeColor : Color
         # fillColor : Color
+        # strokeWidth : float
         --
         + draw (Graphics g) : void
         + move (int dx, int dy) : void
         + contains (int x, int y) : boolean
+        + toSvg () : String
+    }
+}
+
+package io {
+    class SvgWriter {
+        + {static} write (figures : List<Figure>, path : String, w : int, h : int) : void
     }
 
+    class SvgReader {
+        + {static} read (path : String) : List<Figure>
+    }
+
+    class SvgColor {
+        + {static} parse (s : String) : Color
+        + {static} toSvg (c : Color) : String
+    }
 }
 
 EditorFrame *-- Canvas
@@ -68,6 +88,12 @@ EditorFrame *-- EditorController
 EditorController --> Canvas
 EditorController --> Tool
 Canvas --> "0..*" Figure
+EditorFrame ..> SvgWriter
+EditorFrame ..> SvgReader
+SvgWriter ..> Figure
+SvgReader ..> Figure
+SvgReader ..> SvgColor
+SvgWriter ..> SvgColor
 
 @enduml
 ```
@@ -82,10 +108,15 @@ Canvas --> "0..*" Figure
 abstract class Figure {
     # strokeColor : Color
     # fillColor : Color
+    # strokeWidth : float
     --
+    # applyStroke (Graphics g) : void
+    # strokeAttrs () : String
     + draw (Graphics g) : void
     + move (int dx, int dy) : void
     + contains (int x, int y) : boolean
+    + toSvg () : String
+    + setStrokeWidth (float w) : void
 }
 
 class Line {
@@ -93,6 +124,8 @@ class Line {
     - y1 : int
     - x2 : int
     - y2 : int
+    --
+    + setEndPoint (int x2, int y2) : void
 }
 
 class Rectangle {
@@ -100,8 +133,11 @@ class Rectangle {
     - y1 : int
     - x2 : int
     - y2 : int
+    - rx : int
+    - ry : int
     --
     + setEndCorner (int x2, int y2) : void
+    + setRoundedCorners (int rx, int ry) : void
 }
 
 class Circle {
@@ -119,6 +155,8 @@ class Ellipse {
     - y2 : int
     --
     + setEndCorner (int x2, int y2) : void
+    + {static} fromCenter (cx, cy, rx, ry, ...) : Ellipse
+    + {static} fromCenter (cx, cy, r, ...) : Ellipse
 }
 
 class Polyline {
@@ -210,6 +248,7 @@ Tool <|.. DrawPolygonTool
 | `model` | 図形クラスの階層 |
 | `view` | Swing コンポーネント (フレーム・キャンバス) |
 | `controller` | マウスイベント処理とツール抽象化 |
+| `io` | SVG ファイルの読み書き |
 
 ## 補足
 
@@ -217,3 +256,6 @@ Tool <|.. DrawPolygonTool
 - `Tool` インタフェースの `onClick`，`onDoubleClick`，`onMove` は `default` メソッドとして空実装を持つ
 - `EditorController` は `MouseAdapter` を継承して実装する
 - ドラッグ系ツール (`DrawLineTool` 等) は `onPress`/`onDrag`/`onRelease` を使用し，クリック系ツール (`DrawPolylineTool` 等) は `onClick`/`onDoubleClick`/`onMove` を使用する
+- `Figure` の `strokeWidth` は `Graphics2D.setStroke(new BasicStroke(...))` で適用し，可変太さの線描画を実現する
+- `Rectangle` の `rx`/`ry` は SVG の角丸属性に対応し，`drawRoundRect`/`fillRoundRect` で描画する
+- `SvgReader` は `<g>` 要素の `fill`/`stroke`/`stroke-width` と `transform="translate(...)"` を子要素に継承するスタイルコンテキストを持つ

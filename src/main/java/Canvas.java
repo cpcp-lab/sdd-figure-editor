@@ -19,6 +19,16 @@ public class Canvas extends JPanel {
         repaint();
     }
 
+    public List<Figure> getFigures() {
+        return new ArrayList<>(figures);
+    }
+
+    public void setFigures(List<Figure> newFigures) {
+        figures.clear();
+        figures.addAll(newFigures);
+        repaint();
+    }
+
     public void setPreview(Figure f) {
         preview = f;
         repaint();

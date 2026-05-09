@@ -11,6 +11,19 @@ Java/Swing で実装した図形エディタ．
 | Maven | 3.x |
 | OS | macOS / Linux / Windows |
 
+## テストスイートの準備
+
+一部のテストは W3C SVG 1.1 Test Suite の SVG ファイルおよび参照 PNG を使用する．
+テスト実行前に以下の手順でダウンロード・展開しておく必要がある．
+
+```bash
+# プロジェクトルートで実行
+curl -O https://www.w3.org/Graphics/SVG/Test/20110816/archives/W3C_SVG_11_TestSuite.tar.gz
+tar xzf W3C_SVG_11_TestSuite.tar.gz
+```
+
+展開後，プロジェクトルートに `W3C_SVG_11_TestSuite/` ディレクトリが作成される．
+
 ## ビルドと実行
 
 ```bash
@@ -20,11 +33,17 @@ mvn compile
 # 実行
 mvn exec:java
 
-# テスト
+# テスト (全件)
 mvn test
 
 # 特定テストのみ
 mvn test -Dtest=LineTest#containsPointOnLine
+
+# 目視確認テスト (ウィンドウ表示, W3C テストスイート必要)
+mvn test -Dgroups=visual
+
+# 目視確認テスト・自動比較モード (W3C テストスイート必要)
+mvn test -Dgroups=visual -Dvisual.auto=true
 ```
 
 ## 使い方

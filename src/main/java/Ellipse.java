@@ -10,6 +10,18 @@ public class Ellipse extends Figure {
         this.x2 = x2; this.y2 = y2;
     }
 
+    // SVG <ellipse cx cy rx ry> スタイルのファクトリメソッド
+    public static Ellipse fromCenter(int cx, int cy, int rx, int ry,
+                                     Color strokeColor, Color fillColor) {
+        return new Ellipse(cx - rx, cy - ry, cx + rx, cy + ry, strokeColor, fillColor);
+    }
+
+    // SVG <circle cx cy r> スタイルのファクトリメソッド
+    public static Ellipse fromCenter(int cx, int cy, int r,
+                                     Color strokeColor, Color fillColor) {
+        return fromCenter(cx, cy, r, r, strokeColor, fillColor);
+    }
+
     public void setEndCorner(int x2, int y2) {
         this.x2 = x2;
         this.y2 = y2;
@@ -23,6 +35,7 @@ public class Ellipse extends Figure {
     @Override
     public void draw(Graphics g) {
         int x = left(), y = top(), w = width(), h = height();
+        applyStroke(g);
         if (fillColor != null) {
             g.setColor(fillColor);
             g.fillOval(x, y, w, h);
@@ -47,6 +60,14 @@ public class Ellipse extends Figure {
         double dy = y - (top()  + h / 2.0);
         double a = w / 2.0, b = h / 2.0;
         return (dx * dx) / (a * a) + (dy * dy) / (b * b) <= 1.0;
+    }
+
+    @Override
+    public String toSvg() {
+        int cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+        int rx = width() / 2,   ry = height() / 2;
+        return String.format("<ellipse cx=\"%d\" cy=\"%d\" rx=\"%d\" ry=\"%d\" %s/>",
+            cx, cy, rx, ry, strokeAttrs());
     }
 
     public int getX1() { return x1; }
