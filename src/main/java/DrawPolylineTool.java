@@ -8,6 +8,7 @@ public class DrawPolylineTool implements Tool {
         this.canvas = canvas;
     }
 
+    @Override public void onActivate() { canvas.clearSelection(); }
     @Override public void onPress(int x, int y) {}
     @Override public void onDrag(int x, int y) {}
     @Override public void onRelease(int x, int y) {}
@@ -15,7 +16,8 @@ public class DrawPolylineTool implements Tool {
     @Override
     public void onClick(int x, int y) {
         if (preview == null) {
-            preview = new Polyline(Color.BLACK);
+            preview = new Polyline(canvas.getCurrentStrokeColor(), canvas.getCurrentFillColor());
+            preview.setStrokeWidth(canvas.getCurrentStrokeWidth());
             preview.addPoint(x, y);
             preview.addPoint(x, y); // rubber-band point
             canvas.setPreview(preview);

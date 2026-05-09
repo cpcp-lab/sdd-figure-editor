@@ -15,6 +15,8 @@ public abstract class Figure {
 
     public void setStrokeWidth(float w) { strokeWidth = w; }
     public float getStrokeWidth() { return strokeWidth; }
+    public void setStrokeColor(Color c) { strokeColor = c; }
+    public void setFillColor(Color c)   { fillColor = c; }
 
     protected void applyStroke(Graphics g) {
         if (g instanceof Graphics2D g2) {

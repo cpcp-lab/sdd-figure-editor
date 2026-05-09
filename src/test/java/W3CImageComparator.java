@@ -15,7 +15,7 @@ class W3CImageComparator {
     static final String SUITE_DIR =
         System.getProperty("w3c.testsuite.dir", "W3C_SVG_11_TestSuite");
 
-    static final double DEFAULT_THRESHOLD = 0.10;
+    static final double DEFAULT_THRESHOLD = 0.05;
 
     // Figure リストを白背景の BufferedImage にレンダリングする
     static BufferedImage render(List<Figure> figures, int width, int height) {

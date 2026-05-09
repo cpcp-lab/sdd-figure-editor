@@ -34,6 +34,9 @@ class W3CShapesSvgTest {
         "shapes-rect-04-f",
         "shapes-rect-06-f",
         "shapes-rect-07-f",
+        // struct-group-02-b: ネストした <svg> 要素 (x/y オフセット付き) を使用するため除外
+        // struct-group-01-t: rotate transform 未対応のため除外
+        // struct-group-03-t: <use> 要素未対応のため除外
     })
     void svgMatchesPng(String name) throws Exception {
         List<Figure> figures = SvgReader.read(SVG_DIR + name + ".svg");

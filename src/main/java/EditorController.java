@@ -6,21 +6,22 @@ public class EditorController extends MouseAdapter {
 
     public void setTool(Tool tool) {
         this.tool = tool;
+        tool.onActivate();
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-        if (tool != null) tool.onPress(e.getX(), e.getY());
+        if (tool != null) tool.onPressEvent(e);
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        if (tool != null) tool.onDrag(e.getX(), e.getY());
+        if (tool != null) tool.onDragEvent(e);
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        if (tool != null) tool.onRelease(e.getX(), e.getY());
+        if (tool != null) tool.onReleaseEvent(e);
     }
 
     @Override

@@ -9,10 +9,13 @@ public class DrawCircleTool implements Tool {
         this.canvas = canvas;
     }
 
+    @Override public void onActivate() { canvas.clearSelection(); }
+
     @Override
     public void onPress(int x, int y) {
         pressX = x; pressY = y;
-        preview = new Circle(x, y, 0, Color.BLACK, null);
+        preview = new Circle(x, y, 0, canvas.getCurrentStrokeColor(), canvas.getCurrentFillColor());
+        preview.setStrokeWidth(canvas.getCurrentStrokeWidth());
         canvas.setPreview(preview);
     }
 

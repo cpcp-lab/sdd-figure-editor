@@ -8,9 +8,12 @@ public class DrawEllipseTool implements Tool {
         this.canvas = canvas;
     }
 
+    @Override public void onActivate() { canvas.clearSelection(); }
+
     @Override
     public void onPress(int x, int y) {
-        preview = new Ellipse(x, y, x, y, Color.BLACK, null);
+        preview = new Ellipse(x, y, x, y, canvas.getCurrentStrokeColor(), canvas.getCurrentFillColor());
+        preview.setStrokeWidth(canvas.getCurrentStrokeWidth());
         canvas.setPreview(preview);
     }
 

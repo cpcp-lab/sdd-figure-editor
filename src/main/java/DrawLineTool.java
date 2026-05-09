@@ -6,9 +6,12 @@ public class DrawLineTool implements Tool {
         this.canvas = canvas;
     }
 
+    @Override public void onActivate() { canvas.clearSelection(); }
+
     @Override
     public void onPress(int x, int y) {
-        preview = new Line(x, y, x, y);
+        preview = new Line(x, y, x, y, canvas.getCurrentStrokeColor());
+        preview.setStrokeWidth(canvas.getCurrentStrokeWidth());
         canvas.setPreview(preview);
     }
 

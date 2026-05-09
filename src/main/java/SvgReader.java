@@ -70,7 +70,11 @@ public class SvgReader {
         if (colon >= 0) tag = tag.substring(colon + 1);
 
         switch (tag) {
-            case "g"        -> processChildren(el, ctx.merge(el), out);
+            case "g"        -> {
+                List<Figure> groupChildren = new ArrayList<>();
+                processChildren(el, ctx.merge(el), groupChildren);
+                if (!groupChildren.isEmpty()) out.add(new FigureGroup(groupChildren));
+            }
             case "circle"   -> out.add(makeCircle(el, ctx));
             case "ellipse"  -> out.add(makeEllipse(el, ctx));
             case "line"     -> out.add(makeLine(el, ctx));
@@ -105,10 +109,10 @@ public class SvgReader {
     }
 
     private static Line makeLine(Element el, StyleCtx ctx) {
-        int x1 = (int) Math.round(doubleAttr(el, "x1", 0)) + ctx.tx();
-        int y1 = (int) Math.round(doubleAttr(el, "y1", 0)) + ctx.ty();
-        int x2 = (int) Math.round(doubleAttr(el, "x2", 0)) + ctx.tx();
-        int y2 = (int) Math.round(doubleAttr(el, "y2", 0)) + ctx.ty();
+        double x1 = doubleAttr(el, "x1", 0) + ctx.tx();
+        double y1 = doubleAttr(el, "y1", 0) + ctx.ty();
+        double x2 = doubleAttr(el, "x2", 0) + ctx.tx();
+        double y2 = doubleAttr(el, "y2", 0) + ctx.ty();
         StyleCtx s = ctx.merge(el);
         Line l = new Line(x1, y1, x2, y2, s.stroke());
         l.setStrokeWidth(s.strokeWidth());

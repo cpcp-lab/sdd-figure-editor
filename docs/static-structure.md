@@ -22,12 +22,19 @@ package view {
 
     class Canvas {
         - figures : List<Figure>
+        - selected : Set<Figure>
         - preview : Figure
         --
         + addFigure (Figure f) : void
         + getFigures () : List<Figure>
         + setFigures (List<Figure> fs) : void
         + setPreview (Figure f) : void
+        + figureAt (int x, int y) : Figure
+        + select (Figure f, boolean add) : void
+        + clearSelection () : void
+        + getSelection () : Set<Figure>
+        + groupSelected () : void
+        + ungroupSelected () : void
         + paintComponent (Graphics g) : void
     }
 }
@@ -52,6 +59,9 @@ package controller {
         + onClick (int x, int y) : void
         + onDoubleClick (int x, int y) : void
         + onMove (int x, int y) : void
+        + onPressEvent (MouseEvent e) : void
+        + onDragEvent (MouseEvent e) : void
+        + onReleaseEvent (MouseEvent e) : void
     }
 }
 
@@ -66,6 +76,13 @@ package model {
         + contains (int x, int y) : boolean
         + toSvg () : String
     }
+
+    class FigureGroup {
+        - children : List<Figure>
+    }
+
+    Figure <|-- FigureGroup
+    FigureGroup *-- "0..*" Figure
 }
 
 package io {
@@ -179,12 +196,21 @@ class Polygon {
     + getPointCount () : int
 }
 
+class FigureGroup {
+    - children : List<Figure>
+    --
+    + add (Figure f) : void
+    + getChildren () : List<Figure>
+}
+
 Figure <|-- Line
 Figure <|-- Rectangle
 Figure <|-- Circle
 Figure <|-- Ellipse
 Figure <|-- Polyline
 Figure <|-- Polygon
+Figure <|-- FigureGroup
+FigureGroup *-- "0..*" Figure : children
 
 @enduml
 ```
@@ -231,12 +257,19 @@ class DrawPolygonTool {
     - current : Polygon
 }
 
+class SelectTool {
+    - dragTarget : Figure
+    - lastX : int
+    - lastY : int
+}
+
 Tool <|.. DrawLineTool
 Tool <|.. DrawRectTool
 Tool <|.. DrawCircleTool
 Tool <|.. DrawEllipseTool
 Tool <|.. DrawPolylineTool
 Tool <|.. DrawPolygonTool
+Tool <|.. SelectTool
 
 @enduml
 ```
@@ -259,3 +292,5 @@ Tool <|.. DrawPolygonTool
 - `Figure` の `strokeWidth` は `Graphics2D.setStroke(new BasicStroke(...))` で適用し，可変太さの線描画を実現する
 - `Rectangle` の `rx`/`ry` は SVG の角丸属性に対応し，`drawRoundRect`/`fillRoundRect` で描画する
 - `SvgReader` は `<g>` 要素の `fill`/`stroke`/`stroke-width` と `transform="translate(...)"` を子要素に継承するスタイルコンテキストを持つ
+- `FigureGroup` は Composite パターンを適用し，`draw`/`move`/`contains`/`toSvg` を子要素に委譲する．SVG の `<g>` 要素として入出力される
+- `SelectTool` は `onPressEvent(MouseEvent)` をオーバーライドして `e.isControlDown()` で Ctrl+クリックによる複数選択を実現する．ドラッグ時は選択図形全体を移動する
