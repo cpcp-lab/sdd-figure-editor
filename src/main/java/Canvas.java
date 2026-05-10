@@ -6,10 +6,13 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Canvas extends JPanel {
@@ -91,7 +94,6 @@ public class Canvas extends JPanel {
         repaint();
     }
 
-    /** rect 内に含まれる図形をすべて返す (グリッドサンプリングで判定)． */
     public List<Figure> figuresInRect(Rectangle rect) {
         List<Figure> result = new ArrayList<>();
         int step = 6;
@@ -106,7 +108,6 @@ public class Canvas extends JPanel {
         return result;
     }
 
-    /** 座標 (x, y) を含む最前面の図形を返す．なければ null． */
     public Figure figureAt(int x, int y) {
         for (int i = figures.size() - 1; i >= 0; i--) {
             if (figures.get(i).contains(x, y)) return figures.get(i);
@@ -142,13 +143,9 @@ public class Canvas extends JPanel {
         List<Figure> next = new ArrayList<>();
         Set<Figure> newSelection = new LinkedHashSet<>();
         for (Figure f : figures) {
-            if (selected.contains(f) && f instanceof FigureGroup g) {
-                List<Figure> children = g.getChildren();
-                next.addAll(children);
-                newSelection.addAll(children);
-            } else {
-                next.add(f);
-            }
+            List<Figure> baked = selected.contains(f) ? f.bakeTransform() : List.of(f);
+            next.addAll(baked);
+            if (selected.contains(f)) newSelection.addAll(baked);
         }
         figures.clear();
         figures.addAll(next);
@@ -172,9 +169,9 @@ public class Canvas extends JPanel {
                     10f, new float[]{6f, 4f}, 0f));
             g2.drawRect(selectionRect.x, selectionRect.y, selectionRect.width, selectionRect.height);
         }
-        // 選択図形のハイライト: SelectedFigure を走査して点でマークする簡易実装
+        // 選択図形のハイライトとハンドル描画
         if (!selected.isEmpty()) {
-            g2.setColor(new Color(0, 100, 255, 120));
+            g2.setColor(new Color(0, 100, 255, 80));
             for (int xx = 0; xx < getWidth(); xx += 4) {
                 for (int yy = 0; yy < getHeight(); yy += 4) {
                     for (Figure f : selected) {
@@ -182,6 +179,54 @@ public class Canvas extends JPanel {
                     }
                 }
             }
+            for (Figure f : selected) {
+                List<Handle> bbox = f.getBboxHandles();
+                if (f instanceof FigureGroup) drawGroupBoundingBox(g2, bbox);
+                for (Handle h : bbox) drawHandle(g2, h);
+                for (Handle h : f.getHandles()) drawHandle(g2, h);
+            }
+        }
+    }
+
+    private void drawGroupBoundingBox(Graphics2D g2, List<Handle> handles) {
+        Map<Handle.Type, Handle> hmap = new EnumMap<>(Handle.Type.class);
+        for (Handle h : handles) hmap.put(h.getType(), h);
+        Handle nw = hmap.get(Handle.Type.SCALE_NW);
+        Handle ne = hmap.get(Handle.Type.SCALE_NE);
+        Handle se = hmap.get(Handle.Type.SCALE_SE);
+        Handle sw = hmap.get(Handle.Type.SCALE_SW);
+        if (nw == null || ne == null || se == null || sw == null) return;
+        int[] xs = {nw.getCx(), ne.getCx(), se.getCx(), sw.getCx()};
+        int[] ys = {nw.getCy(), ne.getCy(), se.getCy(), sw.getCy()};
+        g2.setColor(new Color(0, 100, 255, 180));
+        g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
+            10f, new float[]{6f, 4f}, 0f));
+        g2.drawPolygon(xs, ys, 4);
+        // 上辺中央と回転ハンドルを結ぶ線
+        Handle rot = hmap.get(Handle.Type.ROTATE);
+        if (rot != null) {
+            int topMidX = (nw.getCx() + ne.getCx()) / 2;
+            int topMidY = (nw.getCy() + ne.getCy()) / 2;
+            g2.setStroke(new BasicStroke(1.0f));
+            g2.drawLine(topMidX, topMidY, rot.getCx(), rot.getCy());
+        }
+    }
+
+    private static void drawHandle(Graphics2D g2, Handle h) {
+        int hs = 8;
+        int hx = h.getCx() - hs / 2;
+        int hy = h.getCy() - hs / 2;
+        g2.setStroke(new BasicStroke(1.5f));
+        if (h.getType() == Handle.Type.ROTATE) {
+            g2.setColor(Color.WHITE);
+            g2.fillOval(hx, hy, hs, hs);
+            g2.setColor(new Color(0, 100, 255));
+            g2.drawOval(hx, hy, hs, hs);
+        } else {
+            g2.setColor(Color.WHITE);
+            g2.fillRect(hx, hy, hs, hs);
+            g2.setColor(new Color(0, 100, 255));
+            g2.drawRect(hx, hy, hs, hs);
         }
     }
 }

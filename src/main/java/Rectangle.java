@@ -1,7 +1,11 @@
 import java.awt.Color;
-import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Rectangle extends Figure {
+public class Rectangle extends Figure implements Rotatable {
     private int x1, y1, x2, y2;
     private int rx = 0, ry = 0;
 
@@ -27,29 +31,28 @@ public class Rectangle extends Figure {
     private int height() { return Math.abs(y2 - y1); }
 
     @Override
-    public void draw(Graphics g) {
+    protected void drawShape(Graphics2D g2) {
         int x = left(), y = top(), w = width(), h = height();
-        applyStroke(g);
+        applyStroke(g2);
         if (rx > 0 || ry > 0) {
-            // SVG rx/ry を Java の arc 幅 (直径) に変換してクランプ
             int arcW = 2 * Math.min(rx, w / 2);
             int arcH = 2 * Math.min(ry, h / 2);
             if (fillColor != null) {
-                g.setColor(fillColor);
-                g.fillRoundRect(x, y, w, h, arcW, arcH);
+                g2.setColor(fillColor);
+                g2.fillRoundRect(x, y, w, h, arcW, arcH);
             }
             if (strokeColor != null) {
-                g.setColor(strokeColor);
-                g.drawRoundRect(x, y, w, h, arcW, arcH);
+                g2.setColor(strokeColor);
+                g2.drawRoundRect(x, y, w, h, arcW, arcH);
             }
         } else {
             if (fillColor != null) {
-                g.setColor(fillColor);
-                g.fillRect(x, y, w, h);
+                g2.setColor(fillColor);
+                g2.fillRect(x, y, w, h);
             }
             if (strokeColor != null) {
-                g.setColor(strokeColor);
-                g.drawRect(x, y, w, h);
+                g2.setColor(strokeColor);
+                g2.drawRect(x, y, w, h);
             }
         }
     }
@@ -61,17 +64,64 @@ public class Rectangle extends Figure {
     }
 
     @Override
-    public boolean contains(int x, int y) {
+    protected boolean containsLocal(int x, int y) {
         return left() <= x && x <= left() + width()
             && top() <= y && y <= top() + height();
+    }
+
+    @Override
+    public void rotate(double theta, double cx, double cy) {
+        transform.preConcatenate(AffineTransform.getRotateInstance(theta, cx, cy));
+    }
+
+    @Override
+    public List<Figure> bakeTransform() {
+        double sx = Math.hypot(transform.getScaleX(), transform.getShearY());
+        double sy = Math.hypot(transform.getShearX(), transform.getScaleY());
+        double angle = Math.atan2(transform.getShearY(), transform.getScaleX());
+        Point2D sc = toScreen((x1 + x2) / 2.0, (y1 + y2) / 2.0);
+        int ncx = (int) Math.round(sc.getX());
+        int ncy = (int) Math.round(sc.getY());
+        int hrx = (int) Math.round(width()  / 2.0 * sx);
+        int hry = (int) Math.round(height() / 2.0 * sy);
+        x1 = ncx - hrx; y1 = ncy - hry;
+        x2 = ncx + hrx; y2 = ncy + hry;
+        if (Math.abs(angle) > 1e-9)
+            transform.setToRotation(angle, ncx, ncy);
+        else
+            transform.setToIdentity();
+        return List.of(this);
+    }
+
+    @Override
+    public List<Handle> getHandles() {
+        // 4 corners: NW(x1,y1), NE(x2,y1), SE(x2,y2), SW(x1,y2)
+        int[][] lc = {{x1, y1}, {x2, y1}, {x2, y2}, {x1, y2}};
+        List<Handle> handles = new ArrayList<>();
+        for (int[] c : lc) {
+            final int lx = c[0], ly = c[1];
+            // opposite corner fields
+            final boolean isX1Side = (lx == x1);
+            final boolean isY1Side = (ly == y1);
+            Point2D sc = toScreen(lx, ly);
+            handles.add(new Handle((int) Math.round(sc.getX()), (int) Math.round(sc.getY()),
+                Handle.Type.ENDPOINT, (nx, ny) -> {
+                    Point2D lp = toLocal(nx, ny);
+                    if (isX1Side) x1 = (int) Math.round(lp.getX());
+                    else          x2 = (int) Math.round(lp.getX());
+                    if (isY1Side) y1 = (int) Math.round(lp.getY());
+                    else          y2 = (int) Math.round(lp.getY());
+                }));
+        }
+        return handles;
     }
 
     @Override
     public String toSvg() {
         String rxry = (rx > 0 || ry > 0)
             ? String.format(" rx=\"%d\" ry=\"%d\"", rx, ry) : "";
-        return String.format("<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"%s %s/>",
-            left(), top(), width(), height(), rxry, strokeAttrs());
+        return String.format("<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"%s %s%s/>",
+            left(), top(), width(), height(), rxry, strokeAttrs(), transformAttr());
     }
 
     public int getX1() { return x1; }

@@ -6,10 +6,6 @@ Java/Swing で実装した図形エディタ．
 本プロジェクトは仕様駆動開発 (Specification-Driven Development) アプローチで実施している．
 詳細な仕様は `docs/` 以下の設計文書を参照のこと．
 
-## ライセンス
-
-[MIT License](LICENSE)
-
 ## 想定環境
 
 | 項目 | バージョン |
@@ -79,3 +75,7 @@ docs/              設計文書
   domain.md
   static-structure.md
 ```
+
+## ライセンス
+
+[MIT License](LICENSE)

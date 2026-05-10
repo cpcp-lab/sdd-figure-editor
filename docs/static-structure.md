@@ -70,11 +70,21 @@ package model {
         # strokeColor : Color
         # fillColor : Color
         # strokeWidth : float
+        # transform : AffineTransform
         --
         + draw (Graphics g) : void
         + move (int dx, int dy) : void
+        + moveInScreen (int dx, int dy) : void
         + contains (int x, int y) : boolean
+        + getHandles () : List<Handle>
+        + getBboxHandles () : List<Handle>
         + toSvg () : String
+    }
+
+    class Handle
+
+    interface Rotatable {
+        + rotate (theta : double, cx : double, cy : double) : void
     }
 
     class FigureGroup {
@@ -83,6 +93,8 @@ package model {
 
     Figure <|-- FigureGroup
     FigureGroup *-- "0..*" Figure
+    Figure --> "0..*" Handle
+    Rotatable <|.. Figure
 }
 
 package io {
@@ -122,25 +134,53 @@ SvgWriter ..> SvgColor
 ```plantuml
 @startuml static-structure-model
 
+interface Rotatable {
+    + rotate (theta : double, cx : double, cy : double) : void
+}
+
 abstract class Figure {
     # strokeColor : Color
     # fillColor : Color
     # strokeWidth : float
+    # transform : AffineTransform
     --
     # applyStroke (Graphics g) : void
     # strokeAttrs () : String
+    # transformAttr () : String
     + draw (Graphics g) : void
     + move (int dx, int dy) : void
+    + moveInScreen (int dx, int dy) : void
     + contains (int x, int y) : boolean
+    + getHandles () : List<Handle>
+    + getBboxHandles () : List<Handle>
+    + bakeTransform () : Figure
     + toSvg () : String
     + setStrokeWidth (float w) : void
 }
 
+class Handle {
+    - cx : int
+    - cy : int
+    - type : Type
+    --
+    + contains (int x, int y) : boolean
+    + drag (int x, int y) : void
+}
+
+enum "Handle.Type" as HandleType {
+    ENDPOINT
+    SCALE_NW
+    SCALE_NE
+    SCALE_SE
+    SCALE_SW
+    ROTATE
+}
+
 class Line {
-    - x1 : int
-    - y1 : int
-    - x2 : int
-    - y2 : int
+    - x1 : double
+    - y1 : double
+    - x2 : double
+    - y2 : double
     --
     + setEndPoint (int x2, int y2) : void
 }
@@ -155,6 +195,7 @@ class Rectangle {
     --
     + setEndCorner (int x2, int y2) : void
     + setRoundedCorners (int rx, int ry) : void
+    + rotate (theta : double, cx : double, cy : double) : void
 }
 
 class Circle {
@@ -163,6 +204,7 @@ class Circle {
     - radius : int
     --
     + setRadius (int r) : void
+    + bakeTransform () : Figure
 }
 
 class Ellipse {
@@ -174,6 +216,7 @@ class Ellipse {
     + setEndCorner (int x2, int y2) : void
     + {static} fromCenter (cx, cy, rx, ry, ...) : Ellipse
     + {static} fromCenter (cx, cy, r, ...) : Ellipse
+    + rotate (theta : double, cx : double, cy : double) : void
 }
 
 class Polyline {
@@ -184,6 +227,8 @@ class Polyline {
     + setLastPoint (int x, int y) : void
     + removeLastPoint () : void
     + getPointCount () : int
+    + rotate (theta : double, cx : double, cy : double) : void
+    + bakeTransform () : Figure
 }
 
 class Polygon {
@@ -194,6 +239,8 @@ class Polygon {
     + setLastPoint (int x, int y) : void
     + removeLastPoint () : void
     + getPointCount () : int
+    + rotate (theta : double, cx : double, cy : double) : void
+    + bakeTransform () : Figure
 }
 
 class FigureGroup {
@@ -201,6 +248,8 @@ class FigureGroup {
     --
     + add (Figure f) : void
     + getChildren () : List<Figure>
+    + scale (sx : double, sy : double, ox : double, oy : double) : void
+    + rotate (theta : double, cx : double, cy : double) : void
 }
 
 Figure <|-- Line
@@ -211,6 +260,15 @@ Figure <|-- Polyline
 Figure <|-- Polygon
 Figure <|-- FigureGroup
 FigureGroup *-- "0..*" Figure : children
+
+Rotatable <|.. Rectangle
+Rotatable <|.. Ellipse
+Rotatable <|.. Polyline
+Rotatable <|.. Polygon
+Rotatable <|.. FigureGroup
+
+Figure --> "0..*" Handle
+Handle --> HandleType
 
 @enduml
 ```
@@ -259,8 +317,14 @@ class DrawPolygonTool {
 
 class SelectTool {
     - dragTarget : Figure
+    - activeHandle : Handle
+    - activeHandleFigure : Figure
     - lastX : int
     - lastY : int
+    - rotateCenterX : double
+    - rotateCenterY : double
+    - scaleFixedX : double
+    - scaleFixedY : double
 }
 
 Tool <|.. DrawLineTool
@@ -294,3 +358,7 @@ Tool <|.. SelectTool
 - `SvgReader` は `<g>` 要素の `fill`/`stroke`/`stroke-width` と `transform="translate(...)"` を子要素に継承するスタイルコンテキストを持つ
 - `FigureGroup` は Composite パターンを適用し，`draw`/`move`/`contains`/`toSvg` を子要素に委譲する．SVG の `<g>` 要素として入出力される
 - `SelectTool` は `onPressEvent(MouseEvent)` をオーバーライドして `e.isControlDown()` で Ctrl+クリックによる複数選択を実現する．ドラッグ時は選択図形全体を移動する
+- `Figure` は `AffineTransform transform` フィールドを持ち，`draw` 時に座標変換を適用する (テンプレートメソッドパターン)．`moveInScreen` はスクリーン空間での平行移動を transform に合成する
+- `Figure.bakeTransform()` はグループ解除時に子図形の transform をローカル座標に焼き込む具象メソッドで，デフォルト実装は何もしない (null を返す)．Line, Polyline, Polygon はオーバーライドして座標を更新し transform をリセットする．`Circle.bakeTransform()` は非均一スケール時に `Ellipse` を返して図形を置き換える
+- `Rotatable` インタフェースは `rotate()` を定義する．`FigureGroup`，`Rectangle`，`Ellipse` が実装し，回転ハンドルのドラッグで `SelectTool` から呼び出される
+- `Handle` はハンドルの画面座標・種別・ドラッグコールバックを持つ値オブジェクト．`Figure.getHandles()` は端点ハンドル，`Figure.getBboxHandles()` は SCALE / ROTATE ハンドルを返す
