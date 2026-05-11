@@ -72,6 +72,39 @@ class FigureGroupTest {
     }
 
     @Test
+    void testBakeTransformShearConvertsRectangleToPolygon() {
+        // せん断を含む transform (回転後に非均一スケール) を持つ Rectangle が
+        // bakeTransform で Polygon に変換されることを検証する
+        Rectangle r = new Rectangle(0, 0, 100, 50, Color.BLACK, null);
+        // 非均一スケールを回転に preConcatenate するとせん断が生じる
+        // (FigureGroup.scale() が preConcatenate で合成する操作と等価)
+        r.getTransform().rotate(Math.PI / 4);
+        java.awt.geom.AffineTransform scale = java.awt.geom.AffineTransform.getScaleInstance(2.0, 1.0);
+        r.getTransform().preConcatenate(scale);
+
+        List<Figure> result = r.bakeTransform();
+
+        assertEquals(1, result.size());
+        assertInstanceOf(Polygon.class, result.get(0),
+            "せん断を含む transform の Rectangle は Polygon に変換されるべき");
+        Polygon poly = (Polygon) result.get(0);
+        assertEquals(4, poly.getPointCount());
+    }
+
+    @Test
+    void testBakeTransformNoShearKeepsRectangle() {
+        // せん断のない transform (回転のみ) では Rectangle のまま
+        Rectangle r = new Rectangle(0, 0, 100, 50, Color.BLACK, null);
+        r.getTransform().rotate(Math.PI / 6);
+
+        List<Figure> result = r.bakeTransform();
+
+        assertEquals(1, result.size());
+        assertInstanceOf(Rectangle.class, result.get(0),
+            "せん断のない transform の Rectangle は Rectangle のまま");
+    }
+
+    @Test
     void testGetChildrenIsUnmodifiable() {
         FigureGroup g = new FigureGroup(List.of(new Circle(0, 0, 5, Color.BLACK, null)));
         assertThrows(UnsupportedOperationException.class,

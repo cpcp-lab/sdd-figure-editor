@@ -73,6 +73,7 @@ public class Ellipse extends Figure implements Rotatable {
     public List<Figure> bakeTransform() {
         double sx = Math.hypot(transform.getScaleX(), transform.getShearY());
         double sy = Math.hypot(transform.getShearX(), transform.getScaleY());
+        strokeWidth *= (float) Math.sqrt(sx * sy);
         double angle = Math.atan2(transform.getShearY(), transform.getScaleX());
         Point2D sc = toScreen((x1 + x2) / 2.0, (y1 + y2) / 2.0);
         int ncx = (int) Math.round(sc.getX());

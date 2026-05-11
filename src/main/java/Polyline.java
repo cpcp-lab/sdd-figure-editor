@@ -98,6 +98,7 @@ public class Polyline extends Figure implements Rotatable {
 
     @Override
     public List<Figure> bakeTransform() {
+        strokeWidth *= (float) strokeScale();
         for (int i = 0; i < xs.size(); i++) {
             Point2D p = toScreen(xs.get(i), ys.get(i));
             xs.set(i, (int) Math.round(p.getX()));

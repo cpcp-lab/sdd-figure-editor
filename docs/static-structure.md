@@ -41,8 +41,7 @@ package view {
 
 package controller {
     class EditorController {
-        - canvas : Canvas
-        - currentTool : Tool
+        - tool : Tool
         --
         + setTool (Tool t) : void
         + mousePressed (MouseEvent e) : void
@@ -308,11 +307,11 @@ class DrawEllipseTool {
 }
 
 class DrawPolylineTool {
-    - current : Polyline
+    - preview : Polyline
 }
 
 class DrawPolygonTool {
-    - current : Polygon
+    - preview : Polygon
 }
 
 class SelectTool {

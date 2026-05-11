@@ -76,9 +76,27 @@ public class Rectangle extends Figure implements Rotatable {
 
     @Override
     public List<Figure> bakeTransform() {
-        double sx = Math.hypot(transform.getScaleX(), transform.getShearY());
-        double sy = Math.hypot(transform.getShearX(), transform.getScaleY());
-        double angle = Math.atan2(transform.getShearY(), transform.getScaleX());
+        // せん断の有無を検査: transform の線形部分の2列ベクトルの内積が 0 でなければせん断あり
+        double m00 = transform.getScaleX(), m10 = transform.getShearY();
+        double m01 = transform.getShearX(), m11 = transform.getScaleY();
+        boolean hasShear = Math.abs(m00 * m01 + m10 * m11) > 1e-6;
+
+        if (hasShear) {
+            // 4頂点をスクリーン座標に変換して Polygon に変換する
+            int[][] corners = {{x1, y1}, {x2, y1}, {x2, y2}, {x1, y2}};
+            Polygon poly = new Polygon(strokeColor, fillColor);
+            poly.setStrokeWidth((float) (strokeWidth * strokeScale()));
+            for (int[] c : corners) {
+                Point2D sc = toScreen(c[0], c[1]);
+                poly.addPoint((int) Math.round(sc.getX()), (int) Math.round(sc.getY()));
+            }
+            return List.of(poly);
+        }
+
+        double sx = Math.hypot(m00, m10);
+        double sy = Math.hypot(m01, m11);
+        strokeWidth *= (float) Math.sqrt(sx * sy);
+        double angle = Math.atan2(m10, m00);
         Point2D sc = toScreen((x1 + x2) / 2.0, (y1 + y2) / 2.0);
         int ncx = (int) Math.round(sc.getX());
         int ncy = (int) Math.round(sc.getY());

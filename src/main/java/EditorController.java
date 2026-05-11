@@ -29,7 +29,7 @@ public class EditorController extends MouseAdapter {
         if (tool == null) return;
         if (e.getClickCount() == 2) {
             tool.onDoubleClick(e.getX(), e.getY());
-        } else if (e.getClickCount() == 1) {
+        } else {
             tool.onClick(e.getX(), e.getY());
         }
     }

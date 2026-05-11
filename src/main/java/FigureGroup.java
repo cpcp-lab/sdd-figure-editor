@@ -55,6 +55,14 @@ public class FigureGroup extends Figure implements Rotatable {
         transform.preConcatenate(t);
     }
 
+    /** ローカル座標軸に沿ってスケールする (transform への後乗算)． */
+    public void scaleLocal(double sx, double sy, double localOriginX, double localOriginY) {
+        AffineTransform t = AffineTransform.getTranslateInstance(localOriginX, localOriginY);
+        t.scale(sx, sy);
+        t.translate(-localOriginX, -localOriginY);
+        transform.concatenate(t);
+    }
+
     /** 上位 transform を子に合成し，子図形のリストを返す (ungroup)． */
     @Override
     public List<Figure> bakeTransform() {

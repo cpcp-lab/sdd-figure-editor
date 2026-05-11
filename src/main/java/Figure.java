@@ -110,6 +110,13 @@ public abstract class Figure {
             SvgColor.toSvg(fillColor), SvgColor.toSvg(strokeColor), sw);
     }
 
+    /** transform に含まれるスケール成分の幾何平均を返す (strokeWidth のスケールに使用)． */
+    protected double strokeScale() {
+        double sx = Math.hypot(transform.getScaleX(), transform.getShearY());
+        double sy = Math.hypot(transform.getShearX(), transform.getScaleY());
+        return Math.sqrt(sx * sy);
+    }
+
     protected Point2D toScreen(double lx, double ly) {
         return transform.transform(new Point2D.Double(lx, ly), null);
     }

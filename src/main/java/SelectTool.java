@@ -1,5 +1,8 @@
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.Point2D;
 import java.util.List;
 
 public class SelectTool implements Tool {
@@ -12,10 +15,14 @@ public class SelectTool implements Tool {
     // ハンドル操作用
     private Handle activeHandle;
     private Figure activeHandleFigure;
-    // スケール操作用
-    private double scaleFixedX, scaleFixedY;
-    private double lastScaleDist;
-    private double lastScaleDx, lastScaleDy; // 非均一スケール用
+    // スケール操作用 (FigureGroup のローカル空間で管理する)
+    private double scaleFixedX, scaleFixedY;       // 固定角のスクリーン座標
+    private double localFixedX, localFixedY;        // 固定角のローカル座標
+    // プレス時の絶対値基準 (累積ではなく毎フレーム絶対スケールを計算するために使用)
+    private double origLocalDx, origLocalDy;        // プレス時のローカル空間変位
+    private double origLocalDist;                   // プレス時のローカル空間距離 (Shift 用)
+    private AffineTransform scaleOrigTransform;     // プレス時の transform のクローン
+    private AffineTransform scaleOrigInvTransform;  // プレス時の transform の逆変換
     // Line Shift 拘束用 (もう一方の端点のスクリーン座標)
     private double lineAnchorX, lineAnchorY;
     // 回転操作用
@@ -72,9 +79,33 @@ public class SelectTool implements Tool {
                             break;
                         }
                     }
-                    lastScaleDist = Math.hypot(x - scaleFixedX, y - scaleFixedY);
-                    lastScaleDx = x - scaleFixedX;
-                    lastScaleDy = y - scaleFixedY;
+                    // プレス時の transform を保存し，固定角とドラッグ開始点をローカル座標に変換する
+                    AffineTransform t = f.getTransform();
+                    scaleOrigTransform = new AffineTransform(t);
+                    try {
+                        scaleOrigInvTransform = scaleOrigTransform.createInverse();
+                        Point2D lf = scaleOrigInvTransform.transform(
+                            new Point2D.Double(scaleFixedX, scaleFixedY), null);
+                        localFixedX = lf.getX(); localFixedY = lf.getY();
+                        Point2D lp = scaleOrigInvTransform.transform(
+                            new Point2D.Double(x, y), null);
+                        origLocalDx = lp.getX() - localFixedX;
+                        origLocalDy = lp.getY() - localFixedY;
+                    } catch (NoninvertibleTransformException ex) {
+                        // transform が縮退している場合はスクリーン座標で代替
+                        scaleOrigInvTransform = null;
+                        localFixedX = scaleFixedX; localFixedY = scaleFixedY;
+                        origLocalDx = x - scaleFixedX;
+                        origLocalDy = y - scaleFixedY;
+                    }
+                    // グループが縮退して全ハンドルが同一点に重なっている場合は
+                    // ハンドルの種類から期待される方向を復元する
+                    double signX = (type == Handle.Type.SCALE_NW || type == Handle.Type.SCALE_SW) ? -1 : 1;
+                    double signY = (type == Handle.Type.SCALE_NW || type == Handle.Type.SCALE_NE) ? -1 : 1;
+                    if (Math.abs(origLocalDx) < 1) origLocalDx = signX;
+                    if (Math.abs(origLocalDy) < 1) origLocalDy = signY;
+                    origLocalDist = Math.hypot(origLocalDx, origLocalDy);
+                    if (origLocalDist < 1) origLocalDist = 1;
                 }
                 break outer;
             }
@@ -130,27 +161,33 @@ public class SelectTool implements Tool {
                     r.rotate(delta, rotateCenterX, rotateCenterY);
                 totalRotation = total;
             } else if (isScaleType(type)) {
-                double newDx = x - scaleFixedX;
-                double newDy = y - scaleFixedY;
                 if (activeHandleFigure instanceof FigureGroup fg) {
-                    if (e.isShiftDown()) {
-                        // Shift: 均一スケール (距離比)
-                        double newDist = Math.hypot(newDx, newDy);
-                        if (lastScaleDist > 0.5) {
-                            double s = newDist / lastScaleDist;
-                            fg.scale(s, s, scaleFixedX, scaleFixedY);
-                        }
-                        lastScaleDist = newDist;
+                    // ドラッグ点をプレス時の逆変換でローカル座標に変換する
+                    // (現在の transform ではなくプレス時の transform を使うことで累積誤差を防ぐ)
+                    double newLocalDx, newLocalDy;
+                    if (scaleOrigInvTransform != null) {
+                        Point2D lp = scaleOrigInvTransform.transform(
+                            new Point2D.Double(x, y), null);
+                        newLocalDx = lp.getX() - localFixedX;
+                        newLocalDy = lp.getY() - localFixedY;
                     } else {
-                        // 非均一スケール (軸別比率)
-                        double sx = Math.abs(lastScaleDx) > 0.5 ? newDx / lastScaleDx : 1.0;
-                        double sy = Math.abs(lastScaleDy) > 0.5 ? newDy / lastScaleDy : 1.0;
-                        fg.scale(sx, sy, scaleFixedX, scaleFixedY);
+                        newLocalDx = x - scaleFixedX;
+                        newLocalDy = y - scaleFixedY;
+                    }
+                    // プレス時基準の絶対スケールを計算し，transform をプレス時に戻してから適用する
+                    fg.getTransform().setTransform(scaleOrigTransform);
+                    if (e.isShiftDown()) {
+                        // Shift: 均一スケール (プレス時距離比，常に正)
+                        double newDist = Math.max(Math.hypot(newLocalDx, newLocalDy), 0.1);
+                        double s = newDist / origLocalDist;
+                        fg.scaleLocal(s, s, localFixedX, localFixedY);
+                    } else {
+                        // 非均一スケール (軸別絶対比率，符号反転による鏡像を許容)
+                        double sx = nonzero(newLocalDx) / origLocalDx;
+                        double sy = nonzero(newLocalDy) / origLocalDy;
+                        fg.scaleLocal(sx, sy, localFixedX, localFixedY);
                     }
                 }
-                lastScaleDx = newDx;
-                lastScaleDy = newDy;
-                lastScaleDist = Math.hypot(newDx, newDy);
             } else {
                 // ENDPOINT ハンドル (個別図形の制御点)
                 if (e.isShiftDown() && activeHandleFigure instanceof Line) {
@@ -208,6 +245,11 @@ public class SelectTool implements Tool {
         double angle = Math.round(Math.atan2(dy, dx) / snap) * snap;
         return new int[]{ax + (int) Math.round(r * Math.cos(angle)),
                          ay + (int) Math.round(r * Math.sin(angle))};
+    }
+
+    /** v が 0 に近すぎる場合に最小値を保証する (スケール計算で 0 除算を防ぐ)． */
+    private static double nonzero(double v) {
+        return Math.abs(v) >= 0.1 ? v : Math.copySign(0.1, v == 0 ? 1 : v);
     }
 
     private static boolean isScaleType(Handle.Type t) {

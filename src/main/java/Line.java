@@ -75,6 +75,7 @@ public class Line extends Figure {
 
     @Override
     public List<Figure> bakeTransform() {
+        strokeWidth *= (float) strokeScale();
         Point2D p1 = toScreen(x1, y1);
         Point2D p2 = toScreen(x2, y2);
         x1 = p1.getX(); y1 = p1.getY();

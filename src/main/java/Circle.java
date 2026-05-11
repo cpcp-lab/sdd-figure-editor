@@ -53,6 +53,7 @@ public class Circle extends Figure {
             // 均一スケール: Circle のまま bake
             cx = ncx; cy = ncy;
             radius = Math.max(0, (int) Math.round(radius * (sx + sy) / 2));
+            strokeWidth *= (float) sx;
             transform.setToIdentity();
             return List.of(this);
         } else {
@@ -60,6 +61,7 @@ public class Circle extends Figure {
             int rx = Math.max(0, (int) Math.round(radius * sx));
             int ry = Math.max(0, (int) Math.round(radius * sy));
             Ellipse e = Ellipse.fromCenter(ncx, ncy, rx, ry, strokeColor, fillColor);
+            // strokeWidth スケールは Ellipse.bakeTransform() に委譲するため未スケールのまま渡す
             e.setStrokeWidth(strokeWidth);
             double angle = Math.atan2(transform.getShearY(), transform.getScaleX());
             if (Math.abs(angle) > 1e-6) {
